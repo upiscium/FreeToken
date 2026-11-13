@@ -9,6 +9,7 @@ On ROCm, the optional-package probes return False so callers use the fallbacks.
 from __future__ import annotations
 
 import functools
+import os
 import importlib.util
 
 import torch
@@ -25,15 +26,34 @@ def _importable(name: str) -> bool:
 
 
 @functools.cache
+def _pre_turing_gpu() -> bool:
+    """Modified by TSUMGI (2026-11): prebuilt FlashInfer/sgl-kernel need sm_75+.
+
+    On older GPUs report them as unavailable so FreeToken takes its existing
+    non-FlashInfer/non-sgl-kernel code paths. FREETOKEN_FORCE_PRE_TURING=0/1
+    overrides detection.
+    """
+    forced = os.environ.get("FREETOKEN_FORCE_PRE_TURING")
+    if forced in ("0", "1"):
+        return forced == "1"
+    try:
+        import torch
+
+        return torch.cuda.is_available() and torch.cuda.get_device_capability(0) < (7, 5)
+    except Exception:
+        return False
+
+
+@functools.cache
 def is_flashinfer_installed() -> bool:
-    if is_rocm():
+    if is_rocm() or _pre_turing_gpu():
         return False
     return _importable("flashinfer")
 
 
 @functools.cache
 def is_sgl_kernel_installed() -> bool:
-    if is_rocm():
+    if is_rocm() or _pre_turing_gpu():
         return False
     return _importable("sgl_kernel")
 

@@ -1,3 +1,4 @@
+// Modified by TSUMGI (2026-11): FREETOKEN_GRID_CONSTANT for pre-Volta GPUs.
 #include <freetoken/pinned.h>
 #include <freetoken/tensor.h>
 #include <freetoken/utils.cuh>
@@ -32,7 +33,7 @@ struct MaskedKernelParams {
 template <std::size_t kNumThreads, std::size_t kMaxOccupancy, bool kUsePDL,
           std::size_t kElementSize, std::size_t kNumSplits, std::integral T>
 __global__ __launch_bounds__(kNumThreads, kMaxOccupancy) void //
-    index_kernel(const __grid_constant__ IndexKernelParams params) {
+    index_kernel(const FREETOKEN_GRID_CONSTANT IndexKernelParams params) {
   using namespace device;
   constexpr auto kSize = kElementSize;
   constexpr auto kSizePerWarp = kSize / kNumSplits;
@@ -64,7 +65,7 @@ template <std::size_t kNumThreads, std::size_t kMaxOccupancy, bool kUsePDL,
           std::size_t kElementSize, std::size_t kNumSplits, std::integral T>
 __global__ __launch_bounds__(kNumThreads, kMaxOccupancy) void //
     masked_index_kernel(
-        const __grid_constant__ MaskedKernelParams mask_params) {
+        const FREETOKEN_GRID_CONSTANT MaskedKernelParams mask_params) {
   using namespace device;
   constexpr auto kSize = kElementSize;
   constexpr auto kSizePerWarp = kSize / kNumSplits;

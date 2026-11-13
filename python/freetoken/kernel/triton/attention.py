@@ -71,13 +71,23 @@ def _select_extend_tile(head_dim: int, block_d: int, smem_optin: int) -> tuple[i
     def fits(block_m: int, block_n: int) -> bool:
         return (block_m + 2 * block_n) * block_d * 2 <= budget
 
+    # Modified by TSUMGI (2026-11): every branch falls back to smaller tiles when
+    # the opt-in shared memory is small (Pascal sm_6x: 48KB). Upstream choices are
+    # unchanged whenever their first tile fits or smem_optin is unknown (0).
     if head_dim <= 128:
-        return 128, 64
-    if head_dim <= 256:
-        return (128, 64) if fits(128, 64) else (64, 32)
-    if head_dim <= 384:
-        return (32, 64) if fits(32, 64) else (32, 32)
-    return (32, 64) if fits(32, 64) else (16, 16)
+        candidates = ((128, 64), (64, 32), (32, 32), (16, 16))
+    elif head_dim <= 256:
+        candidates = ((128, 64), (64, 32), (32, 16), (16, 16))
+    elif head_dim <= 384:
+        candidates = ((32, 64), (32, 32), (16, 16))
+    else:
+        candidates = ((32, 64), (16, 16))
+    if smem_optin == 0:
+        return candidates[0] if head_dim <= 128 else candidates[1]
+    for block_m, block_n in candidates:
+        if fits(block_m, block_n):
+            return block_m, block_n
+    return candidates[-1]
 
 
 @triton.jit

@@ -3,6 +3,14 @@
 #include <freetoken/hip_compat.h>
 #include <freetoken/utils.h>
 
+// Modified by TSUMGI (2026-11): __grid_constant__ is only valid for compute_70+.
+// Pascal (sm_6x) device passes drop the annotation; the parameter stays const.
+#if defined(__CUDA_ARCH__) && (__CUDA_ARCH__ < 700)
+#define FREETOKEN_GRID_CONSTANT
+#else
+#define FREETOKEN_GRID_CONSTANT __grid_constant__
+#endif
+
 #include <dlpack/dlpack.h>
 #include <tvm/ffi/extra/c_env_api.h>
 

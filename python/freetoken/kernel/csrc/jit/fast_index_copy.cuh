@@ -1,3 +1,4 @@
+// Modified by TSUMGI (2026-11): FREETOKEN_GRID_CONSTANT for pre-Volta GPUs.
 #include <freetoken/pinned.h>
 #include <freetoken/tensor.h>
 #include <freetoken/utils.cuh>
@@ -492,7 +493,7 @@ struct MultiIndexCopyParams {
 
 template <typename IdType, std::size_t kNumThreads, std::size_t kBlocksPerBank>
 __global__ __launch_bounds__(kNumThreads) void fast_index_copy_multi(
-    const __grid_constant__ MultiIndexCopyParams p
+    const FREETOKEN_GRID_CONSTANT MultiIndexCopyParams p
 ) {
     if (p.wait_flag != nullptr) {
         if (threadIdx.x == 0) {
