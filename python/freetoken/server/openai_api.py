@@ -33,6 +33,7 @@ from .generation import (
     ToolCallArgsDelta,
     ToolCallsDelta,
     ToolCallStart,
+    count_prompt_tokens,
     generate_events,
     generate_full,
     prerender_error,
@@ -127,6 +128,16 @@ def register_openai_routes(
             return gate
         return await handle_chat_completion(req, request, state, get_model_sampling())
 
+    @app.post("/v1/chat/completions/input_tokens")
+    async def v1_chat_completions_input_tokens(req: ChatCompletionRequest, request: Request):
+        # Added by TSUMGI (2026-11): llama.cpp-compatible prompt token count for an OpenAI
+        # chat request, so a gateway can enforce input/context limits before admission.
+        log_request("/v1/chat/completions/input_tokens", req, request)
+        state = get_state()
+        if (gate := _maintenance_gate(state)) is not None:
+            return gate
+        return await handle_chat_input_tokens(req, state, get_model_sampling())
+
     @app.post("/v1/completions")
     async def v1_completions(req: CompletionRequest, request: Request):
         log_request("/v1/completions", req, request)
@@ -149,6 +160,36 @@ def register_openai_routes(
             supported_reasoning_efforts=efforts,
             default_reasoning_effort=default_effort,
         )])
+
+
+async def handle_chat_input_tokens(
+    req: ChatCompletionRequest,
+    state: Any,
+    model_sampling: dict[str, Any],
+):
+    """Added by TSUMGI (2026-11): count the prompt exactly as /v1/chat/completions renders it
+    (same GenSpec conversion, same frontend tokenizer as /v1/messages/count_tokens)."""
+    try:
+        spec = chat_request_to_genspec(req, model_sampling)
+    except ValueError as exc:
+        return create_error_response(str(exc))
+    if not spec.messages:
+        return create_error_response("messages: no tokenizable content", param="messages")
+    try:
+        n_tokens = await count_prompt_tokens(
+            spec.messages,
+            spec.template_tools,
+            spec.chat_template_kwargs,
+            state,
+            inline_system_policy=spec.inline_system_policy,
+        )
+    except GenerationError as exc:
+        return create_error_response(str(exc), code=exc.code)
+    except Exception as exc:  # noqa: BLE001 - tokenizer init / other failure -> server error
+        return create_error_response(
+            f"token counting failed: {exc}", status_code=500, err_type="api_error"
+        )
+    return JSONResponse(content={"input_tokens": n_tokens})
 
 
 async def handle_chat_completion(

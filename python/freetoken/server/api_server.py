@@ -487,7 +487,8 @@ _TRACKED_REQUEST_PREFIXES = (
 # Subpaths that share a tracked prefix but are NOT generation requests. count_tokens never
 # enters generation accounting, and its first-touch tokenizer load would otherwise dominate the
 # /v1/stats p95 and pollute /v1/requests — exclude it before the prefix check below.
-_UNTRACKED_REQUEST_PREFIXES = ("/v1/messages/count_tokens",)
+# Modified by TSUMGI (2026-11): the chat input_tokens count is not a generation either.
+_UNTRACKED_REQUEST_PREFIXES = ("/v1/messages/count_tokens", "/v1/chat/completions/input_tokens")
 
 
 def _served_model_name() -> str | None:

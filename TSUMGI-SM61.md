@@ -19,6 +19,10 @@ TSUMGI" notice.
 4. `kernel/torch_sampling.py` (new) and `engine/sample.py`: below sm_70, sampling
    uses pure PyTorch. The fused Triton samplers need `acq_rel` atomics, which PTX
    only provides on sm_70+. `FREETOKEN_FORCE_PRE_VOLTA=0/1` overrides detection.
+5. `server/openai_api.py`: new `POST /v1/chat/completions/input_tokens`. It takes an OpenAI
+   chat request and returns `{"input_tokens": N}` (llama.cpp-compatible), counted with the
+   same GenSpec conversion and frontend tokenizer as generation, so TSUMGI can enforce
+   context limits before running a job. This change is not GPU-specific.
 
 ## Runtime requirements on sm_61 (not changed by this branch)
 - PyTorch `2.14.1+cu126` (the default cu130 build has no sm_61 kernels), plus
