@@ -25,10 +25,13 @@ def make_device_tensor(data: List, dtype: torch.dtype, device: torch.device) -> 
 
 def sampling_module():
     """flashinfer.sampling when installed, else the triton kernels with the same API."""
-    from freetoken.kernel.backend import is_flashinfer_installed
+    from freetoken.kernel.backend import is_flashinfer_installed, is_pre_volta_gpu
 
     if is_flashinfer_installed():
         import flashinfer.sampling as sampling
+    elif is_pre_volta_gpu():
+        # Modified by TSUMGI (2026-11): the fused triton samplers need sm_70+ atomics.
+        import freetoken.kernel.torch_sampling as sampling
     else:
         import freetoken.kernel.triton.sampling as sampling
     return sampling

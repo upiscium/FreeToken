@@ -45,6 +45,18 @@ def _pre_turing_gpu() -> bool:
 
 
 @functools.cache
+def is_pre_volta_gpu() -> bool:
+    """Modified by TSUMGI (2026-11): True below sm_70 (no acq_rel atomics in PTX)."""
+    forced = os.environ.get("FREETOKEN_FORCE_PRE_VOLTA")
+    if forced in ("0", "1"):
+        return forced == "1"
+    try:
+        return torch.cuda.is_available() and torch.cuda.get_device_capability(0) < (7, 0)
+    except Exception:
+        return False
+
+
+@functools.cache
 def is_flashinfer_installed() -> bool:
     if is_rocm() or _pre_turing_gpu():
         return False

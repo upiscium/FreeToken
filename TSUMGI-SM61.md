@@ -16,6 +16,9 @@ TSUMGI" notice.
 3. `kernel/triton/attention.py`: the extend/prefill tile choice falls back to
    smaller tiles when opt-in shared memory is small (48KB on Pascal). Upstream
    choices are unchanged when the first tile fits.
+4. `kernel/torch_sampling.py` (new) and `engine/sample.py`: below sm_70, sampling
+   uses pure PyTorch. The fused Triton samplers need `acq_rel` atomics, which PTX
+   only provides on sm_70+. `FREETOKEN_FORCE_PRE_VOLTA=0/1` overrides detection.
 
 ## Runtime requirements on sm_61 (not changed by this branch)
 - PyTorch `2.14.1+cu126` (the default cu130 build has no sm_61 kernels), plus
@@ -29,3 +32,5 @@ TSUMGI" notice.
 GTX 1080 Ti 11GB, driver 580.173.02, 16GB RAM: Qwen3-30B-A3B GGUF Q2_K with
 offload MoE. Chat, SSE streaming, tool calls and a 5.3K-token prompt all worked
 (decode ~55 tok/s, prefill ~500 tok/s). A 20-minute soak of 415 requests had 0 errors.
+Qwen3.6-35B-A3B GGUF UD-Q4_K_XL (head_dim 256) ran with top-k/top-p sampling
+on a 1080 Ti whose VRAM was shared with other processes (~26 tok/s decode).
